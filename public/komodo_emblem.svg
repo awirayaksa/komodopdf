@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <rect width="400" height="400" fill="#1a1a1a"/>
+  <!-- Dragon body -->
+  <ellipse cx="160" cy="210" rx="72" ry="38" fill="#2d6a2d"/>
+  <!-- Head -->
+  <ellipse cx="232" cy="198" rx="38" ry="28" fill="#2d6a2d"/>
+  <!-- Snout -->
+  <polygon points="265,193 295,198 265,205" fill="#235023"/>
+  <!-- Tongue -->
+  <line x1="295" y1="198" x2="315" y2="190" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+  <line x1="295" y1="198" x2="315" y2="206" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+  <!-- Eye -->
+  <circle cx="240" cy="191" r="6" fill="#1a1a1a"/>
+  <circle cx="242" cy="190" r="2" fill="#f39c12"/>
+  <!-- Scale texture -->
+  <ellipse cx="150" cy="203" rx="10" ry="7" fill="#235023" opacity="0.7"/>
+  <ellipse cx="170" cy="210" rx="10" ry="7" fill="#235023" opacity="0.7"/>
+  <ellipse cx="135" cy="215" rx="10" ry="7" fill="#235023" opacity="0.7"/>
+  <ellipse cx="190" cy="205" rx="10" ry="7" fill="#235023" opacity="0.7"/>
+  <ellipse cx="210" cy="213" rx="10" ry="7" fill="#235023" opacity="0.6"/>
+  <!-- Tail -->
+  <path d="M90,220 C60,230 35,240 15,230 C0,223 -2,210 5,205" fill="none" stroke="#2d6a2d" stroke-width="22" stroke-linecap="round"/>
+  <path d="M90,220 C60,230 35,240 15,230 C0,223 -2,210 5,205" fill="none" stroke="#235023" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+  <!-- Legs -->
+  <line x1="125" y1="240" x2="108" y2="267" stroke="#2d6a2d" stroke-width="14" stroke-linecap="round"/>
+  <line x1="108" y1="267" x2="93" y2="270" stroke="#2d6a2d" stroke-width="10" stroke-linecap="round"/>
+  <line x1="93" y1="270" x2="82" y2="273" stroke="#2d6a2d" stroke-width="7" stroke-linecap="round"/>
+  <line x1="180" y1="243" x2="185" y2="273" stroke="#2d6a2d" stroke-width="14" stroke-linecap="round"/>
+  <line x1="185" y1="273" x2="200" y2="278" stroke="#2d6a2d" stroke-width="10" stroke-linecap="round"/>
+  <line x1="200" y1="278" x2="212" y2="280" stroke="#2d6a2d" stroke-width="7" stroke-linecap="round"/>
+  <!-- Front legs -->
+  <line x1="220" y1="223" x2="235" y2="253" stroke="#2d6a2d" stroke-width="12" stroke-linecap="round"/>
+  <line x1="235" y1="253" x2="250" y2="259" stroke="#2d6a2d" stroke-width="8" stroke-linecap="round"/>
+  <line x1="145" y1="245" x2="130" y2="275" stroke="#2d6a2d" stroke-width="12" stroke-linecap="round"/>
+  <line x1="130" y1="275" x2="115" y2="279" stroke="#2d6a2d" stroke-width="8" stroke-linecap="round"/>
+  <!-- PDF document -->
+  <rect x="138" y="163" width="46" height="54" rx="5" fill="#e8f5e8" opacity="0.95"/>
+  <rect x="138" y="163" width="46" height="54" rx="5" fill="none" stroke="#4caf50" stroke-width="1.5"/>
+  <polygon points="170,163 184,163 184,177" fill="#4caf50" opacity="0.4"/>
+  <line x1="170" y1="163" x2="170" y2="177" stroke="#4caf50" stroke-width="1"/>
+  <line x1="170" y1="177" x2="184" y2="177" stroke="#4caf50" stroke-width="1"/>
+  <line x1="147" y1="185" x2="172" y2="185" stroke="#4caf50" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <line x1="147" y1="193" x2="178" y2="193" stroke="#4caf50" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <line x1="147" y1="201" x2="168" y2="201" stroke="#4caf50" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <rect x="147" y="208" width="28" height="4" rx="2" fill="#f39c12" opacity="0.9"/>
+</svg>
