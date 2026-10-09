@@ -173,6 +173,9 @@ export default function SetupModal() {
       setApiKeyPresent(true);
       setConfigured(true);
       setConfig({
+        embedBackend,
+        embedBaseUrl,
+        embedModelRemote,
         baseUrl: localBaseUrl,
         chatModel: localChatModel,
         embeddingModel: localEmbedModel,

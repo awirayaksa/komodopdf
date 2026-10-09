@@ -266,3 +266,7 @@ textarea:focus-visible {
 .ai-markdown del {
   color: var(--text-muted);
 }
+
+.pdf-text-layer {
+  --scale-factor: 1;
+}

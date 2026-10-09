@@ -90,6 +90,7 @@ export async function extractPageContent(
   lines.push(currentLine);
 
   const spans: TextSpan[] = [];
+  const viewport = page.getViewport({ scale: 1 });
 
   for (const line of lines) {
     // Read each line left-to-right.
@@ -124,9 +125,11 @@ export async function extractPageContent(
     }
 
     // Append a newline so concatenated page text preserves line structure.
+    // Canvas/highlights use top-left viewport coordinates, including page rotation.
+    const [vx0, vy0, vx1, vy1] = viewport.convertToViewportRectangle([lineX0, lineY0, lineX1, lineY1]);
     spans.push({
       text: text + "\n",
-      quads: [{ x0: lineX0, y0: lineY0, x1: lineX1, y1: lineY1 }],
+      quads: [{ x0: Math.min(vx0, vx1), y0: Math.min(vy0, vy1), x1: Math.max(vx0, vx1), y1: Math.max(vy0, vy1) }],
     });
   }
 

@@ -6,6 +6,9 @@ use tauri::ipc::Channel;
 
 // validate module retired — replaced by confidence routing in lib.rs::ask
 
+// Invalidate old indexes whose highlights used bottom-left PDF coordinates.
+pub fn index_id(provider_id: &str) -> String { format!("{provider_id}:viewport-v2") }
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PageExtraction {
@@ -231,6 +234,7 @@ pub async fn index_document(
     progress.send(IndexProgress { done: 1, total }).ok();
 
     let chunks = chunk_pages(&pages, 700);
+    if chunks.is_empty() { return Err(LlmError::Provider("No extractable text in this PDF".into())); }
     log::debug!("index_document chunked into {} chunks", chunks.len());
 
     progress.send(IndexProgress { done: 2, total }).ok();
@@ -240,6 +244,7 @@ pub async fn index_document(
 
     let embed_start = std::time::Instant::now();
     let embeddings = embedder.embed(&texts, EmbedInput::Document).await?;
+    if embeddings.len() != chunks.len() { return Err(LlmError::Provider("Embedding provider returned an unexpected number of vectors".into())); }
     let embed_elapsed = embed_start.elapsed();
     log::info!(
         "index_document embed complete: {} vectors in {:?}",
@@ -278,7 +283,7 @@ pub async fn index_document(
         .map_err(|e| LlmError::Provider(e.to_string()))?;
     log::debug!("index_document store_chunks done");
 
-    db.mark_indexed(file_hash, &embedder.id())
+    db.mark_indexed(file_hash, &index_id(&embedder.id()))
         .map_err(|e| LlmError::Provider(e.to_string()))?;
     log::debug!("index_document mark_indexed done");
 
@@ -361,7 +366,7 @@ pub async fn build_grounding(
     persona: &str,
 ) -> Result<Grounding, LlmError> {
     let q_vectors = embedder.embed(&[question.to_string()], EmbedInput::Query).await?;
-    let q_vector = &q_vectors[0];
+    let q_vector = q_vectors.first().ok_or_else(|| LlmError::Provider("Embedding provider returned no query vector".into()))?;
 
     let chunks = db
         .load_chunks(file_hash)

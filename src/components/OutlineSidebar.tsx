@@ -23,7 +23,7 @@ function OutlineNode({ items, depth = 0 }: OutlineNodeProps) {
       } else {
         return;
       }
-      const pageIndex = await pdfDoc.getPageIndex(pageRef as any);
+      const pageIndex = typeof pageRef === "number" ? pageRef : await pdfDoc.getPageIndex(pageRef);
       setCurrentPage(pageIndex + 1);
     } catch {
       // ignore
@@ -104,17 +104,15 @@ export default function OutlineSidebar() {
         onClick={toggleOutline}
         title="Show outline"
         style={{
-          position: "absolute",
-          left: 0,
-          top: 48,
-          bottom: 0,
           width: 28,
+          flexShrink: 0,
+          alignSelf: "stretch",
+          padding: 0,
           backgroundColor: "var(--surface-raised)",
           borderRight: "1px solid var(--border)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          zIndex: 10,
         }}
       >
         ☰

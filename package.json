@@ -12,7 +12,9 @@
     "release:minor": "npm version minor",
     "release:major": "npm version major",
     "version": "node scripts/sync-version.mjs && git add src-tauri/tauri.conf.json src-tauri/Cargo.toml",
-    "postversion": "git push --follow-tags"
+    "postversion": "git push --follow-tags",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -33,6 +35,8 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vitest": "^5.0.3",
+    "@playwright/test": "^1.64.0"
   }
 }
