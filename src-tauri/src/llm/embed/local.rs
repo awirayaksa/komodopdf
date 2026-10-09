@@ -18,6 +18,36 @@ pub struct LocalEmbedder {
     model: Arc<TextEmbedding>,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[tokio::test]
+    #[ignore = "Requires model files in KOMODO_TEST_MODELS"]
+    async fn downloaded_models_produce_valid_embeddings() {
+        let root = PathBuf::from(std::env::var("KOMODO_TEST_MODELS").unwrap());
+        for id in ["bge-small-en-v1.5", "multilingual-e5-small"] {
+            let spec = crate::models::spec(id).unwrap();
+            let embedder = LocalEmbedder::new(root.join(id), spec).unwrap();
+            let vectors = embedder
+                .embed(
+                    &[
+                        "A PDF reading assistant".into(),
+                        "日本語の論文を読む".into(),
+                    ],
+                    EmbedInput::Query,
+                )
+                .await
+                .unwrap();
+            assert_eq!(vectors.len(), 2);
+            for vector in vectors {
+                assert_eq!(vector.len(), spec.dimensions);
+                assert!(vector.iter().all(|v| v.is_finite()));
+                assert!(vector.iter().map(|v| v * v).sum::<f32>() > 0.9);
+            }
+        }
+    }
+}
+
 impl LocalEmbedder {
     pub fn new(model_dir: PathBuf, spec: &ModelSpec) -> anyhow::Result<Self> {
         log::debug!("LocalEmbedder::new loading model '{}' from {:?}", spec.id, model_dir);
