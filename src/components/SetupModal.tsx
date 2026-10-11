@@ -53,6 +53,7 @@ export default function SetupModal() {
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<ModelInfo["status"] | null>(null);
   const [downloadingModel, setDownloadingModel] = useState<string | null>(null);
+  const [downloadOpen, setDownloadOpen] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<{
     doneBytes: number;
     totalBytes: number;
@@ -189,6 +190,7 @@ export default function SetupModal() {
     if (!selectedStatus) return;
     const modelId = selectedStatus.id;
     setDownloadingModel(modelId);
+    setDownloadOpen(true);
     setDownloadProgress(null);
     try {
       const channel = new Channel<{
@@ -210,6 +212,7 @@ export default function SetupModal() {
       alert(`Download failed: ${e}`);
     } finally {
       setDownloadingModel(null);
+      setDownloadOpen(false);
       setDownloadProgress(null);
     }
   }
@@ -444,13 +447,13 @@ export default function SetupModal() {
         </div>
       </div>
 
-      {downloadingModel && (
+      {downloadingModel && downloadOpen && (
         <ModelDownloadModal
           progress={downloadProgress}
           onCancel={() => {
             // Can't truly cancel the Rust download without more plumbing;
             // at minimum close the modal so the user isn't stuck.
-            setDownloadingModel(null);
+            setDownloadOpen(false);
           }}
         />
       )}
