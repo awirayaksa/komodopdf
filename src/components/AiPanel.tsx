@@ -38,6 +38,9 @@ export default function AiPanel() {
         store.setApiKeyPresent(isConfigured);
         store.setConfigured(isConfigured);
         store.setConfig({
+          embedBackend: settings.embedBackend === "remote" ? "remote" : "local",
+          embedBaseUrl: settings.embedBaseUrl || "",
+          embedModelRemote: settings.embedModelRemote || "",
           baseUrl: settings.chatBaseUrl || "https://api.openai.com/v1",
           chatModel: settings.chatModel || "gpt-4o-mini",
           embeddingModel: settings.embedModel || "nomic-embed-text-v1.5",
@@ -53,7 +56,7 @@ export default function AiPanel() {
   const doAsk = useCallback(async (questionOverride?: string) => {
     const store = useReaderStore.getState();
     const q = questionOverride ?? input.trim();
-    if (!q) return;
+    if (!q || store.streaming || !store.fileHash) return;
 
     if (!store.configured) {
       store.setPendingQuestion(q);
@@ -78,7 +81,7 @@ export default function AiPanel() {
     store.setStreaming(true);
 
     // Include recent conversation history for multi-turn context (last 6 messages, excluding the current question)
-    const history = store.messages.slice(0, -1).slice(-6).map((m) => ({
+    const history = store.messages.slice(-6).map((m) => ({
       role: m.role,
       content: m.content,
     }));
@@ -88,6 +91,7 @@ export default function AiPanel() {
 
     channel.onmessage = (event) => {
       const store2 = useReaderStore.getState();
+      if (store2.pdfDoc !== store.pdfDoc) return;
       if (event.kind === "sources") {
         sources = event.data || [];
       } else if (event.kind === "token") {
@@ -123,6 +127,7 @@ export default function AiPanel() {
       });
     } catch (e: any) {
       const store2 = useReaderStore.getState();
+      if (store2.pdfDoc !== store.pdfDoc) return;
       store2.setStreaming(false);
       store2.appendToken(`\n[Error: ${e.toString()}]`);
     }
@@ -153,13 +158,9 @@ export default function AiPanel() {
     return [...new Set(nums)].sort((a, b) => a - b);
   }
 
-  function handleCitationClick(sourceIdx: number) {
+  function handleCitationClick(sourceIdx: number, message: typeof messages[number]) {
     const store = useReaderStore.getState();
-    const lastAssistant = [...store.messages]
-      .reverse()
-      .find((m) => m.role === "assistant");
-    if (!lastAssistant || !lastAssistant.sources) return;
-    const source = lastAssistant.sources.find((s) => s.idx === sourceIdx);
+    const source = message.sources?.find((s) => s.idx === sourceIdx);
     if (!source) return;
 
     store.setCurrentPage(source.page);
@@ -320,7 +321,7 @@ export default function AiPanel() {
                   {msg.citations.map((c) => (
                     <button
                       key={c}
-                      onClick={() => handleCitationClick(c)}
+                      onClick={() => handleCitationClick(c, msg)}
                       style={{
                         padding: "4px 10px",
                         borderRadius: 12,
@@ -398,6 +399,7 @@ export default function AiPanel() {
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
+                if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                 e.preventDefault();
                 doAsk();
               }
@@ -410,6 +412,7 @@ export default function AiPanel() {
             style={{
               flex: 1,
               padding: "8px 12px",
+              minWidth: 0,
               borderRadius: 6,
               border: "1px solid var(--border)",
               backgroundColor: "var(--surface)",

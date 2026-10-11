@@ -1,38 +1,23 @@
 import { TextLayer } from "pdfjs-dist";
 import type { PDFPageProxy } from "pdfjs-dist";
+import "pdfjs-dist/web/pdf_viewer.css";
 
-export async function buildTextLayer(
-  page: PDFPageProxy,
-  container: HTMLDivElement,
-  scale: number
-): Promise<boolean> {
+export async function buildTextLayer(page: PDFPageProxy, container: HTMLDivElement, scale: number, signal: AbortSignal): Promise<boolean> {
   const textContent = await page.getTextContent();
-  container.innerHTML = "";
-
-  const viewport = page.getViewport({ scale });
-
-  const textLayer = new TextLayer({
-    textContentSource: textContent,
-    container,
-    viewport,
-  });
-
-  await textLayer.render();
-
-  const spans = container.querySelectorAll("span");
-  for (const span of spans) {
-    (span as HTMLElement).style.userSelect = "text";
-    (span as HTMLElement).style.color = "transparent";
-    (span as HTMLElement).style.cursor = "text";
+  signal.throwIfAborted();
+  const buffer = document.createElement("div");
+  buffer.className = "textLayer pdf-text-layer";
+  buffer.style.setProperty("--scale-factor", String(scale));
+  const layer = new TextLayer({ textContentSource: textContent, container: buffer, viewport: page.getViewport({ scale }) });
+  const cancel = () => layer.cancel();
+  signal.addEventListener("abort", cancel, { once: true });
+  try {
+    await layer.render();
+    signal.throwIfAborted();
+    container.style.setProperty("--scale-factor", String(scale));
+    container.replaceChildren(...Array.from(buffer.childNodes));
+    return textContent.items.some((item) => "str" in item && item.str.trim().length > 0);
+  } finally {
+    signal.removeEventListener("abort", cancel);
   }
-
-  let hasAnyText = false;
-  for (const item of textContent.items) {
-    if ("str" in item && item.str && item.str.trim().length > 0) {
-      hasAnyText = true;
-      break;
-    }
-  }
-
-  return hasAnyText;
 }

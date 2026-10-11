@@ -24,8 +24,9 @@ function App() {
     async function run() {
       setIndexState("extracting");
       const pages = await extractAllPages(pdfDoc!);
+      if (cancelled) return;
 
-      const auditEnabled = await invoke("is_audit_enabled") as boolean;
+      const auditEnabled = await invoke("is_audit_enabled").catch(() => false) as boolean;
       if (auditEnabled) {
         try {
           const auditText = pages
@@ -44,7 +45,7 @@ function App() {
       setIndexState("indexing");
       const progressChannel = new Channel<{ done: number; total: number }>();
       progressChannel.onmessage = (msg) => {
-        setIndexProgress(msg);
+        if (!cancelled) setIndexProgress(msg);
       };
 
       try {
@@ -61,6 +62,8 @@ function App() {
         }
       } catch (e) {
         if (!cancelled) {
+          useReaderStore.getState().setPendingQuestion(null);
+          useReaderStore.getState().addMessage({ role: "assistant", content: `Indexing failed: ${String(e)}` });
           setIndexState("idle");
           setIndexProgress(null);
           useReaderStore.getState().setActiveModal("none");
@@ -68,7 +71,14 @@ function App() {
       }
     }
 
-    run();
+    run().catch((e) => {
+      if (cancelled) return;
+      setIndexState("idle");
+      setIndexProgress(null);
+      useReaderStore.getState().setActiveModal("none");
+      useReaderStore.getState().setPendingQuestion(null);
+      useReaderStore.getState().addMessage({ role: "assistant", content: `Indexing failed: ${String(e)}` });
+    });
     return () => {
       cancelled = true;
     };
@@ -79,7 +89,7 @@ function App() {
       <Toolbar />
       <div style={{ display: "flex", flex: 1, overflow: "hidden", position: "relative", minHeight: 0 }}>
         <OutlineSidebar />
-        <PanelGroup direction="horizontal" style={{ flex: 1 }}>
+        <PanelGroup direction="horizontal" style={{ flex: 1, minWidth: 0 }}>
           <Panel defaultSize={70} minSize={30}>
             <ReaderPane />
           </Panel>

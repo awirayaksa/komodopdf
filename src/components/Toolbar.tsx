@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
+import { useState } from "react";
 import { useReaderStore } from "../state/useReaderStore";
 import { loadPdfFromArrayBuffer } from "../pdf/loader";
 
@@ -8,7 +9,7 @@ export default function Toolbar() {
   const {
     currentPage,
     totalPages,
-    scale,
+    displayScale,
     fitMode,
     setScale,
     setFitMode,
@@ -16,6 +17,8 @@ export default function Toolbar() {
   } = useReaderStore();
 
   const hasDoc = totalPages > 0;
+  const [opening, setOpening] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
 
   async function sha256(arrayBuffer: ArrayBuffer): Promise<string> {
     const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
@@ -24,6 +27,9 @@ export default function Toolbar() {
   }
 
   async function handleOpen() {
+    setOpenError(null);
+    setOpening(true);
+    try {
     const selected = await open({
       multiple: false,
       directory: false,
@@ -33,20 +39,33 @@ export default function Toolbar() {
 
     const bytes = await readFile(selected);
     const arrayBuffer = new Uint8Array(bytes).buffer;
-    const doc = await loadPdfFromArrayBuffer(arrayBuffer);
+    // PDF.js transfers this buffer to its worker; hash it before that transfer.
     const fileHash = await sha256(arrayBuffer);
+    const doc = await loadPdfFromArrayBuffer(arrayBuffer);
+    const previousDoc = useReaderStore.getState().pdfDoc;
     useReaderStore.getState().setPdfDoc(doc, selected, fileHash);
+    if (previousDoc) void previousDoc.destroy().catch(console.warn);
 
     const outline = await doc.getOutline().catch(() => []);
-    useReaderStore.getState().setOutline(outline as any);
+    if (useReaderStore.getState().pdfDoc !== doc) return;
+    useReaderStore.getState().setOutline(outline ?? []);
 
     // Check if already indexed
     try {
-      const embedId = `local:${useReaderStore.getState().embeddingModel}`;
+      const config = useReaderStore.getState();
+      const embedId = config.embedBackend === "remote"
+        ? `remote:${config.embedBaseUrl.replace(/\/+$/, "")}/${config.embedModelRemote}`
+        : `local:${config.embeddingModel}`;
       const indexed = (await invoke("is_indexed", { fileHash, embedId })) as boolean;
+      if (useReaderStore.getState().pdfDoc !== doc) return;
       useReaderStore.getState().setIndexState(indexed ? "ready" : "idle");
     } catch {
       useReaderStore.getState().setIndexState("idle");
+    }
+    } catch (e) {
+      setOpenError(String(e));
+    } finally {
+      setOpening(false);
     }
   }
 
@@ -95,6 +114,7 @@ export default function Toolbar() {
 
       <button
         onClick={handleOpen}
+        disabled={opening}
         className="btn-accent"
         style={{
           padding: "6px 14px",
@@ -102,8 +122,10 @@ export default function Toolbar() {
           fontWeight: 500,
         }}
       >
-        Open PDF
+        {opening ? "Opening…" : "Open PDF"}
       </button>
+      {openError && <span role="alert" title={openError} style={{ color: "#f59e0b", fontSize: 12 }}>Could not open PDF: {openError}</span>}
+
 
       {hasDoc && (
         <>
@@ -141,7 +163,7 @@ export default function Toolbar() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
             <button
-              onClick={() => setScale(scale * 1.2)}
+              onClick={() => setScale(displayScale * 1.2)}
               title="Zoom in"
               style={{
                 padding: "4px 8px",
@@ -153,10 +175,10 @@ export default function Toolbar() {
               +
             </button>
             <span style={{ fontVariantNumeric: "tabular-nums", minWidth: 48, textAlign: "center" }}>
-              {fitMode ? "Fit" : `${Math.round((scale * 100) / 10) * 10}%`}
+              {fitMode ? "Fit" : `${Math.round(displayScale * 100)}%`}
             </span>
             <button
-              onClick={() => setScale(Math.max(0.25, scale / 1.2))}
+              onClick={() => setScale(Math.max(0.25, displayScale / 1.2))}
               title="Zoom out"
               style={{
                 padding: "4px 8px",
@@ -170,6 +192,7 @@ export default function Toolbar() {
             <button
               onClick={() => setFitMode(fitMode === "width" ? null : "width")}
               title="Fit width"
+              aria-pressed={fitMode === "width"}
               className={fitMode === "width" ? "btn-accent-active" : ""}
               style={{
                 padding: "4px 10px",
@@ -184,6 +207,7 @@ export default function Toolbar() {
             <button
               onClick={() => setFitMode(fitMode === "page" ? null : "page")}
               title="Fit page"
+              aria-pressed={fitMode === "page"}
               className={fitMode === "page" ? "btn-accent-active" : ""}
               style={{
                 padding: "4px 10px",

@@ -137,7 +137,7 @@ fn delete_api_key(slot: KeySlot) -> Result<(), String> {
 
 #[tauri::command]
 fn is_indexed(state: tauri::State<'_, Arc<Db>>, file_hash: String, embed_id: String) -> bool {
-    state.is_indexed(&file_hash, &embed_id)
+    state.is_indexed(&file_hash, &rag::index_id(&embed_id))
 }
 
 #[tauri::command]
@@ -278,6 +278,9 @@ async fn ask(
     };
 
     let top_k = settings.top_k as usize;
+    if !state.is_indexed(&file_hash, &rag::index_id(&embedder.id())) {
+        return Err("This PDF needs to be reindexed with the current embedding settings".into());
+    }
     let grounding = build_grounding(
         &*state, &file_hash, &question, &ctx, top_k, embedder.as_ref(), &persona,
     )
@@ -377,7 +380,7 @@ async fn test_connection(
     state: tauri::State<'_, Arc<Db>>,
     app: tauri::AppHandle,
     chat_key: Option<String>,
-    _embed_key: Option<String>,
+    embed_key: Option<String>,
 ) -> Result<TestResult, String> {
     let settings = state.get_settings().map_err(|e| e.to_string())?;
 
@@ -425,8 +428,9 @@ async fn test_connection(
     let embedder: Box<dyn llm::EmbeddingProvider> = if settings.embed_backend == "remote" {
         let base_url = settings.embed_base_url.clone().unwrap_or_default();
         let model = settings.embed_model_remote.clone().unwrap_or_default();
-        let key = secrets::get_api_key(KeySlot::Embed)
-            .map_err(|e| e.to_string())?
+        let key = embed_key
+            .filter(|k| !k.is_empty())
+            .or_else(|| secrets::get_api_key(KeySlot::Embed).ok().flatten())
             .unwrap_or_default();
         Box::new(llm::embed::openai_compat::OpenAiCompatibleEmbedder::new(
             base_url, key, model, 1536,

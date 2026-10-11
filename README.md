@@ -118,6 +118,13 @@ Network calls go *only* to the AI provider you explicitly configure. Contributio
 analytics, "phone-home," or any upload of document content will not be accepted. See
 [CONTRIBUTING.md](./CONTRIBUTING.md#privacy-promise-dont-break-it).
 
+## Regression tests
+
+With Node.js 22.12 or newer, run `npm ci`, `npm test`, and `npm run build`.
+Install the test browser with `npx playwright install chromium`, then run
+`npm run test:e2e`. The browser tests use a synthetic PDF and mock Tauri IPC.
+Rust regression tests run with `cargo test --manifest-path src-tauri/Cargo.toml --lib`.
+
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first — Komodo uses the

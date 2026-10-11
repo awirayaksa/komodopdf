@@ -200,6 +200,14 @@ impl Db {
     pub fn store_chunks(&self, file_hash: &str, chunks: &[ChunkRow]) -> anyhow::Result<()> {
         let mut conn = self.conn.lock().unwrap();
         let tx = conn.transaction()?;
+        tx.execute(
+            "DELETE FROM chunks WHERE file_hash = ?1",
+            params![file_hash],
+        )?;
+        tx.execute(
+            "DELETE FROM documents WHERE file_hash = ?1",
+            params![file_hash],
+        )?;
         for c in chunks {
             tx.execute(
                 "INSERT OR REPLACE INTO chunks (id, file_hash, page, text, quads_json, vector)
@@ -256,4 +264,36 @@ pub struct ChunkRow {
     pub text: String,
     pub quads_json: String,
     pub vector: Vec<u8>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn db() -> Db {
+        let db = Db {
+            conn: Mutex::new(Connection::open_in_memory().unwrap()),
+        };
+        db.migrate().unwrap();
+        db
+    }
+
+    #[test]
+    fn rebuilding_replaces_stale_chunks_and_invalidates_old_index() {
+        let db = db();
+        let chunk = |id: &str| ChunkRow {
+            id: id.into(),
+            file_hash: "pdf".into(),
+            page: 1,
+            text: id.into(),
+            quads_json: "[]".into(),
+            vector: vec![0; 4],
+        };
+        db.store_chunks("pdf", &[chunk("old")]).unwrap();
+        db.mark_indexed("pdf", "old-model").unwrap();
+        db.store_chunks("pdf", &[chunk("new")]).unwrap();
+        assert!(!db.is_indexed("pdf", "old-model"));
+        let chunks = db.load_chunks("pdf").unwrap();
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].id, "new");
+    }
 }
