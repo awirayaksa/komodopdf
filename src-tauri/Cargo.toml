@@ -1,6 +1,6 @@
 [package]
 name = "komodo-pdf"
-version = "0.1.1"
+version = "0.1.2"
 description = "A local-first, private PDF reader with grounded AI"
 authors = ["you"]
 edition = "2021"
