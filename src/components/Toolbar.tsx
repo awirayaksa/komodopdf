@@ -1,9 +1,8 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { readFile } from "@tauri-apps/plugin-fs";
-import { invoke } from "@tauri-apps/api/core";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReaderStore } from "../state/useReaderStore";
-import { loadPdfFromArrayBuffer } from "../pdf/loader";
+import { openPdfPath } from "../pdf/openPdf";
+import { subscribeToPdfOpenRequests } from "../pdf/openRequests";
 
 export default function Toolbar() {
   const {
@@ -20,52 +19,40 @@ export default function Toolbar() {
   const [opening, setOpening] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
 
-  async function sha256(arrayBuffer: ArrayBuffer): Promise<string> {
-    const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  const pendingOpens = useRef(0);
+
+  async function openPath(path: string) {
+    pendingOpens.current += 1;
+    setOpening(true);
+    setOpenError(null);
+    try {
+      await openPdfPath(path);
+    } catch (e) {
+      setOpenError(`${path}: ${String(e)}`);
+    } finally {
+      pendingOpens.current -= 1;
+      setOpening(pendingOpens.current > 0);
+    }
   }
 
+  useEffect(() => subscribeToPdfOpenRequests(openPath, (error) => setOpenError(String(error))), []);
+
   async function handleOpen() {
-    setOpenError(null);
+    pendingOpens.current += 1;
     setOpening(true);
+    setOpenError(null);
     try {
-    const selected = await open({
-      multiple: false,
-      directory: false,
-      filters: [{ name: "PDF", extensions: ["pdf"] }],
-    });
-    if (!selected || Array.isArray(selected)) return;
-
-    const bytes = await readFile(selected);
-    const arrayBuffer = new Uint8Array(bytes).buffer;
-    // PDF.js transfers this buffer to its worker; hash it before that transfer.
-    const fileHash = await sha256(arrayBuffer);
-    const doc = await loadPdfFromArrayBuffer(arrayBuffer);
-    const previousDoc = useReaderStore.getState().pdfDoc;
-    useReaderStore.getState().setPdfDoc(doc, selected, fileHash);
-    if (previousDoc) void previousDoc.destroy().catch(console.warn);
-
-    const outline = await doc.getOutline().catch(() => []);
-    if (useReaderStore.getState().pdfDoc !== doc) return;
-    useReaderStore.getState().setOutline(outline ?? []);
-
-    // Check if already indexed
-    try {
-      const config = useReaderStore.getState();
-      const embedId = config.embedBackend === "remote"
-        ? `remote:${config.embedBaseUrl.replace(/\/+$/, "")}/${config.embedModelRemote}`
-        : `local:${config.embeddingModel}`;
-      const indexed = (await invoke("is_indexed", { fileHash, embedId })) as boolean;
-      if (useReaderStore.getState().pdfDoc !== doc) return;
-      useReaderStore.getState().setIndexState(indexed ? "ready" : "idle");
-    } catch {
-      useReaderStore.getState().setIndexState("idle");
-    }
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      });
+      if (selected && !Array.isArray(selected)) await openPath(selected);
     } catch (e) {
       setOpenError(String(e));
     } finally {
-      setOpening(false);
+      pendingOpens.current -= 1;
+      setOpening(pendingOpens.current > 0);
     }
   }
 

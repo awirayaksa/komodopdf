@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?if $(sys.BUILDARCH)="x86"?>
+  <?define KomodoWin64 = "no" ?>
+<?else?>
+  <?define KomodoWin64 = "yes" ?>
+<?endif?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="INSTALLDIR">
+      <!-- Tauri puts external components in a different feature from Path.
+           Use INSTALLDIR instead of a cross-feature file reference (ICE69).
+           MSI is per-machine; NSIS separately supports both scopes. -->
+      <Component Id="KomodoPdfAssociations" Guid="*" Win64="$(var.KomodoWin64)">
+        <RegistryKey Root="HKLM" Key="Software\Classes\KomodoPDF.AssocFile.PDF">
+          <RegistryValue Type="string" Value="PDF Document" />
+          <RegistryKey Key="DefaultIcon">
+            <RegistryValue Type="string" Value="&quot;[INSTALLDIR]komodo-pdf.exe&quot;,0" />
+          </RegistryKey>
+          <RegistryKey Key="shell\open\command">
+            <RegistryValue Type="string" Value="&quot;[INSTALLDIR]komodo-pdf.exe&quot; &quot;%1&quot;" />
+          </RegistryKey>
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\Classes\.pdf\OpenWithProgids">
+          <RegistryValue Name="KomodoPDF.AssocFile.PDF" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\KomodoPDF\Capabilities">
+          <RegistryValue Name="ApplicationName" Type="string" Value="Komodo PDF" KeyPath="yes" />
+          <RegistryValue Name="ApplicationDescription" Type="string" Value="A local-first, private PDF reader with grounded AI" />
+          <RegistryValue Name="ApplicationIcon" Type="string" Value="&quot;[INSTALLDIR]komodo-pdf.exe&quot;,0" />
+          <RegistryKey Key="FileAssociations">
+            <RegistryValue Name=".pdf" Type="string" Value="KomodoPDF.AssocFile.PDF" />
+          </RegistryKey>
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="Software\RegisteredApplications">
+          <RegistryValue Name="Komodo PDF" Type="string" Value="Software\KomodoPDF\Capabilities" />
+        </RegistryKey>
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+</Wix>

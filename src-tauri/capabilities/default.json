@@ -8,6 +8,7 @@
     "opener:default",
     "opener:allow-reveal-item-in-dir",
     "dialog:default",
-    "fs:default"
+    "fs:default",
+    "fs:allow-read-file"
   ]
 }

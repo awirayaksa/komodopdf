@@ -33,7 +33,16 @@
     ],
     "windows": {
       "nsis": {
-        "installMode": "both"
+        "installMode": "both",
+        "installerHooks": "windows/pdf-associations.nsh"
+      },
+      "wix": {
+        "fragmentPaths": [
+          "windows/pdf-associations.wxs"
+        ],
+        "componentRefs": [
+          "KomodoPdfAssociations"
+        ]
       }
     }
   }
